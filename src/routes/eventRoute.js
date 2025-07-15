@@ -8,7 +8,7 @@ router.get('/:id',eController.getEventDetails)
 router.post('/:id/register', eController.registerEvent)
 router.delete('/:id/register',eController.cancelRegistration)
 router.get('/upcoming',eController.getUpcomingEvents)
-
+router.get('/:id/stats',eController.getEventStats)
 
 
 module.exports = router ;

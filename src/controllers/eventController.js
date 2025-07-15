@@ -211,9 +211,56 @@ const getUpcomingEvents = async (req,res)=>{
         })
     }
 }
+const getEventStats = async (req,res)=>{
+    const eventId = req.params.id;
+
+    try{
+        const isEvent = await pool.query(
+            `
+            SELECT capacity
+            FROM events 
+            WHERE id = $1
+            `,
+            [eventId]
+        );
+        if(isEvent.rows.length === 0){
+            return res.status(400).json({
+                error: "Event Not Found"
+            })
+        }
+
+        const eventCapacity = parseInt(isEvent.rows[0].capacity)
+
+        const totalRegistration = await pool.query(
+            `
+            
+            SELECT COUNT(*)
+            FROM event_registrations 
+            WHERE event_id = $1
+            `,
+            [eventId]
+        )
+        const totalRegistrationNumber = parseInt(totalRegistration.rows[0].count)
+        const remainingCapacity = eventCapacity - totalRegistrationNumber;
+        const percentageOfCapacityUsed = ((totalRegistrationNumber / eventCapacity)*100).toFixed(2)
+
+        res.status(200).json({
+            totalRegistrationNumber,
+            remainingCapacity,
+            percentageOfCapacityUsed: Number(percentageOfCapacityUsed)
+        })
+        
+    } catch (error){
+        console.error("Error when Fetching event stats")
+        res.status(500).json({
+            error: "Server Error"
+        })
+    }
+}
 module.exports = { createEvent ,
     getEventDetails,
     registerEvent,
     cancelRegistration,
-    getUpcomingEvents 
+    getUpcomingEvents ,
+    getEventStats
 }
