@@ -125,4 +125,72 @@ const registerEvent = async (req,res)=>{
         })
     }
 }
-module.exports = { createEvent ,getEventDetails,registerEvent}
+const cancelRegistration = async (req,res)=>{
+    const eventId = req.params.id;
+    const {userId} = req.body;
+
+    try {
+        const isEvent = await pool.query(
+            `SELECT *
+            FROM events
+            WHERE id = $1
+            `,
+            [eventId]
+        )
+        if(isEvent.rows.length === 0){
+            return res.status(404).json({
+                error: "Event not Founnd"
+            })
+        }
+
+        const isUser = await pool.query(
+            `
+            SELECT *
+            FROM users
+            WHERE id = $1
+            `,
+            [userId]
+        )
+        if(isUser.rows.length === 0 ){
+            return res.status(404).json({
+                error: " User not found"
+            })
+        }
+        const isRegisteredForEvent = await pool.query(
+            `
+            SELECT *
+            FROM event_registrations
+            WHERE user_id = $1 AND event_id = $2
+            `,
+            [userId,eventId]
+        )
+        if(isRegisteredForEvent.rows.length === 0){
+            return res.status(404).json({
+                error: " Registration not found for this user and event"
+            })
+        }
+        await pool.query(
+            `
+            DELETE
+            FROM event_registrations
+            WHERE user_id = $1 AND event_id = $2
+            `,
+            [userId,eventId]
+
+            
+        )
+        res.status(200).json({
+            message: "Registration cancelled for this event successfully"
+        })
+    }catch(error){
+        console.error("Error when canceling registration: ",error);
+        res.status(500).json({
+            error: "Server Error"
+        })
+    }
+}
+module.exports = { createEvent ,
+    getEventDetails,
+    registerEvent,
+    cancelRegistration
+}
