@@ -53,4 +53,76 @@ const getEventDetails = async (req,res)=>{
         res.status(500).json({error: 'Internal Server Error'})
     }
 }
-module.exports = { createEvent ,getEventDetails}
+const registerEvent = async (req,res)=>{
+    const eventId = req.params.id;
+    const {userId} = req.body;
+
+    try{
+        const eventResult = await pool.query(
+            `SELECT * 
+            FROM events 
+            WHERE id = $1`, 
+            [eventId]
+        )
+
+        if(eventResult.rows.length === 0){
+            return res.status(404).json({error: "Event not Found"});
+
+        }
+        const event = eventResult.rows[0];
+        const todayDate  = new Date();
+        if(new Date(event.datetime) < todayDate){
+            return res.status(400).json({
+                error : "Event Already past, you can't registered"
+            })
+        }
+        const isUser = await pool.query(
+            `SELECT * 
+            FROM users 
+            WHERE id = $1`, 
+            [userId]
+        )
+        if(isUser.rows.length === 0){
+            return res.status(404).json({
+                error: 'User not Found'
+            })
+        }
+        const isRegistered = await pool.query(
+            `SELECT * 
+            FROM event_registrations 
+            WHERE user_id = $1 AND event_id = $2`,
+            [userId, eventId]
+        )
+        if(isRegistered.rows.length > 0){
+            return res.status(409).json({
+                error: "User Already Registered For this event"
+            })
+        }
+
+        const allRegisteredUser = await pool.query(
+            `SELECT COUNT(*) 
+            FROM event_registrations 
+            WHERE event_id = $1`,
+            [eventId]
+        )
+        const allRegisteredUserNumber = parseInt(allRegisteredUser.rows[0].count);
+        if(allRegisteredUserNumber >= event.capacity){
+            return registerEvent.status(400).json({
+                error: " Capacity is full, you can't registered"
+            })
+        }
+
+        await pool.query(
+            `INSERT INTO event_registrations (user_id, event_id) VALUES ($1, $2)`,
+            [userId, eventId]
+        )
+        res.status(201).json({message: " Successfully registered for this event"})
+
+    } catch (error){
+        console.error("Error when registering user on event",error)
+        res.status(500).json({
+            error: "Server Error"
+        })
+    }
+}
+module.exports = { createEvent ,getEventDetails,registerEvent}
