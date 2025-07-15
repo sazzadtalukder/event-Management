@@ -189,8 +189,31 @@ const cancelRegistration = async (req,res)=>{
         })
     }
 }
+const getUpcomingEvents = async (req,res)=>{
+    try{
+        
+        const today = new Date().toISOString();
+
+        const result = await pool.query(
+            `
+            SELECT *
+            FROM events
+            WHERE datetime > $1
+            ORDER BY datetime ASC, location ASC
+            `,
+            [today]
+        )
+        res.status(200).json(result.rows)
+    }catch (error){
+        console.error("Error when fetching upcoming",error)
+        return res.status(500).json({
+            error: "Server Error"
+        })
+    }
+}
 module.exports = { createEvent ,
     getEventDetails,
     registerEvent,
-    cancelRegistration
+    cancelRegistration,
+    getUpcomingEvents 
 }
